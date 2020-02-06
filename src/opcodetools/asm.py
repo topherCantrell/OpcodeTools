@@ -2,7 +2,8 @@ import opcodetools.assembler.assembler_manager
 import opcodetools.cpu.cpu_manager
 
 # TODO: this should come from command line
-filename = '../../test/test_assembler/DoubleGap.asm'
+#filename = '../../test/test_assembler/DoubleGap.asm'
+filename = '../../test/test_assembler/test8052.asm'
 
 # Look for the CPU define if it wasn't given on the command line
 with open(filename) as f:
