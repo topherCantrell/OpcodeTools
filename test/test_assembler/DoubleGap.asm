@@ -36,7 +36,7 @@
 .MUSBIND   = 167
 .MUSBVOL   = 168
 
-F000:
+0xF000:
 main:
     SEI                       ; Turn off interrupts
     CLD                       ; Clear the "decimal" flag

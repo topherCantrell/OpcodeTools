@@ -14,3 +14,5 @@ class Test_DoubleGap(unittest.TestCase):
         asm.code = asm.remove_comments_and_blanks(lines)
         
         asm.assemble()
+        
+        asm.write_listing('test.lst')
