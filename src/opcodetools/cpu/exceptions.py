@@ -1,0 +1,2 @@
+class CPUException(Exception):
+    pass
