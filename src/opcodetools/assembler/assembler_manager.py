@@ -7,4 +7,16 @@ def get_assembler_by_name(name:str) -> opcodetools.assembler.base_assembler.Asse
     
     if name == '6502':
         return opcodetools.assembler.base_assembler.Assembler(cp)
+    elif name == '6803':
+        return None
+    elif name == '6809':
+        return None
+    elif name == '8052':
+        return None
+    elif name == 'DVG':
+        return None
+    elif name == 'Z80':
+        return None
+    elif name == 'Z80GB':
+        return None
     

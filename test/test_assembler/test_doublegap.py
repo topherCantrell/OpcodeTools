@@ -16,3 +16,5 @@ class Test_DoubleGap(unittest.TestCase):
         asm.assemble()
         
         asm.write_listing('test.lst')
+        
+        asm.write_binary('test.bin')
