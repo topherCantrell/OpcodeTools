@@ -1,0 +1,4 @@
+*.pyc
+src/opcodetools.egg-info
+src/dist
+src/build
