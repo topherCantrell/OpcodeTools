@@ -126,7 +126,7 @@ class Assembler:
 
     NON_SUB_CHARS = ',@#$~!?[]{}|' # Add as needed
     
-    def find_opcode_for_text(self, text: str, assembler):
+    def find_opcode_for_text(self, text: str, assembler,pass_number:int):
         '''Find the one opcode that best matches this line of text
         
         In finding the correct opcode, we parse out all the substitution
@@ -236,6 +236,10 @@ class Assembler:
                     if sz in op.use[u]:
                         return (op,possibles_info[i])
         
+        ret = self.resolve_multiple_opcodes(possibles,possibles_info,pass_number)
+        return ret
+    
+    def resolve_multiple_opcodes(self,possibles,possibles_info,pass_number):    
         raise AssemblerException('Multiple Matches')
     
     def fill_in_opcode(self, text, asm, address, op, pass_number):      
@@ -342,7 +346,7 @@ class Assembler:
                     cur_term = cur_term + c
 
         if in_string:
-            raise ASMException('Missing closing quotes', line)
+            raise AssemblerException('Missing closing quotes', line)
 
         cur_term = cur_term.strip()
         if cur_term:
@@ -387,7 +391,7 @@ class Assembler:
         n = n[1:i].strip()
         if pass_number == 2 and (n in self.labels or n in self.defines):
             # Second pass ... handle multiply-defined errors
-            raise ASMException('Multiply defined: ' + n, line)
+            raise AssemblerException('Multiply defined: ' + n, line)
         if n.startswith('_'):
             # Handle configs
             self.process_config_define(n, v)
@@ -408,7 +412,7 @@ class Assembler:
         #        self.cpu.make_frags()
         self.defines[key] = value
 
-    def assemble(self):
+    def _assemble_old(self):
         '''Two-pass assembly
         '''
 
@@ -435,14 +439,14 @@ class Assembler:
                         line['address'] = address
 
                     else:
-                        raise ASMException('Unknown directive: ' + n, line)
+                        raise AssemblerException('Unknown directive: ' + n, line)
 
                 elif n.endswith(':'):
                     # Label (or origin)
                     n = n[:-1].strip()
                     if pass_number == 0:
                         if n in self.labels or n in self.defines:
-                            raise ASMException(
+                            raise AssemblerException(
                                 'Multiply defined: ' + n, line)
 
                     try:
@@ -457,11 +461,11 @@ class Assembler:
                 else:
                     line['address'] = address
                     if not self.cpu:
-                        raise ASMException('No CPU defined', line)
+                        raise AssemblerException('No CPU defined', line)
                     # Opcode
-                    op = self.cpu.find_opcode_for_text(n, self)
+                    op = self.cpu.find_opcode_for_text(n, self,pass_number)
                     if not op:
-                        raise ASMException('Unknown opcode: ' + n, line)                    
+                        raise AssemblerException('Unknown opcode: ' + n, line)                    
                                         
                     # TODO: here
                     line['data'] = self.cpu.fill_in_opcode(n, self, address, op, pass_number)
@@ -571,7 +575,7 @@ class Assembler:
                     if not self.cpu:
                         raise AssemblerException('No CPU defined', line)
                     # Opcode
-                    op = self.find_opcode_for_text(n, self)
+                    op = self.find_opcode_for_text(n, self,pass_number)
                     if not op:
                         raise AssemblerException('Unknown opcode: ' + n, line)                    
                                         

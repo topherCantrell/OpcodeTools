@@ -11,9 +11,9 @@ def get_assembler_by_name(name:str) -> opcodetools.assembler.base_assembler.Asse
         return None
     elif name == '6809':
         return None
-    elif name == '8052':
-        from opcodetools.assembler.assembler_8052 import Assembler8052
-        return Assembler8052(cp)
+    elif name == '8051':
+        from opcodetools.assembler.assembler_8051 import Assembler8051
+        return Assembler8051(cp)
     elif name == 'DVG':
         return None
     elif name == 'Z80':

@@ -1,3 +1,4 @@
+"""
 import unittest
 
 import assembler.asm
@@ -54,3 +55,4 @@ class Test_Assembly(unittest.TestCase):
         asm.defines['_default_base_page']='false'        
         g,i = cp.find_opcode_for_text(asm.code[5]['text'],asm)
         self.assertTrue(g.mnemonic == 'LDA t')
+        """

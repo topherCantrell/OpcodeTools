@@ -276,7 +276,7 @@ OPCODES = [
 ]
 
 
-class CPU_8052(opcodetools.cpu.base_cpu.CPU):
+class CPU_8051(opcodetools.cpu.base_cpu.CPU):
 
     def __init__(self):
         super().__init__(OPCODES)

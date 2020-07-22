@@ -20,9 +20,9 @@ def get_cpu_by_name(name: str) -> opcodetools.cpu.base_cpu.CPU:
     elif name == '6809':
         import opcodetools.cpu.cpu_6809
         cp = opcodetools.cpu.cpu_6809.CPU_6809()
-    elif name == '8052':
-        import opcodetools.cpu.cpu_8052
-        cp = opcodetools.cpu.cpu_8052.CPU_8052()
+    elif name == '8051':
+        import opcodetools.cpu.cpu_8051
+        cp = opcodetools.cpu.cpu_8051.CPU_8051()
     elif name == 'DVG':
         import opcodetools.cpu.cpu_DVG
         cp = opcodetools.cpu.cpu_DVG.CPU_DVG()
