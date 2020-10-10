@@ -160,10 +160,14 @@ class BaseAssembly:
             # If not, we might have the address defined. If so, pick based on value.
 
             if '>' in text:
+                # Developer says two-bytes
                 sz = 2
             elif '<' in text:
+                # Developer says one-byte
                 sz = 1
             else:
+                # We might be able to figure out what it is if the value is
+                # defined already
                 targ = None
                 for p in possibles_info:
                     for k in p:
@@ -180,6 +184,7 @@ class BaseAssembly:
                     else:
                         sz = 2
                 except Exception:
+                    # Can't tell if this is one or two bytes ... go with 2
                     sz = 2
 
             for i in range(len(possibles) - 1, -1, -1):
