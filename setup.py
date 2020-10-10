@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="opcodetools",  # Replace with your own username
-    version="1.1",
+    version="1.2",
     author="Chris Cantrell",
     author_email="topherCantrell@gmail.com",
     description="Assemblers/Disassemblers for retro processors (Z80, 6502, 6809, etc)",
