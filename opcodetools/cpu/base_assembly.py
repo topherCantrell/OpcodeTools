@@ -1,3 +1,4 @@
+
 class AssemblyException(Exception):
     pass
 
@@ -39,8 +40,8 @@ class BaseAssembly:
     def remove_unneeded_whitespace(self, text: str):
         '''Remove unneeded whitespace from a string
 
-        ASSUMPTION: All opcodes are of the form
-            LDA  (p,X)
+        ASSUMPTION: All opcodes are one or two terms
+            LDA (p,X)
         There are at most TWO terms separated by whitespace. All other whitespace
         can be removed.
 
@@ -50,7 +51,6 @@ class BaseAssembly:
         Returns:
             str: the processed string
         '''
-
         i = text.find(' ')
         if i >= 0:
             ret = text[0:i + 1] + text[i + 1:].replace(' ', '')
@@ -145,25 +145,42 @@ class BaseAssembly:
         n = len(possibles)
 
         if n == 0:
-            # Not found
+            # None found
             return None
 
         if n == 1:
+            # Exactly one found
             return (possibles[0], possibles_info[0])
 
-        # Multiple found. Try and pick one.
+        # Multiple were found. Try and pick one.
 
         if n == 2 and possibles[0].frags[0] == possibles[1].frags[0]:
             # Special, common case where we can override the addressing mode
             # The mode might be forced with "<" or ">"
             # If not, we might have the address defined. If so, pick based on value.
-            sz = 1
-            if '_default_base_page' in assembler.defines and assembler.defines['_default_base_page'] == 'false':
-                sz = 2
+
             if '>' in text:
                 sz = 2
             elif '<' in text:
                 sz = 1
+            else:
+                targ = None
+                for p in possibles_info:
+                    for k in p:
+                        if targ is None:
+                            targ = p[k]
+                            continue
+                        if p[k] != targ:
+                            raise AssemblyException('Could not from possible opcodes')
+
+                try:
+                    tv = assembler.parse_numeric(targ)
+                    if tv < 256:
+                        sz = 1
+                    else:
+                        sz = 2
+                except Exception:
+                    sz = 2
 
             for i in range(len(possibles) - 1, -1, -1):
                 cnt = 0
@@ -174,9 +191,9 @@ class BaseAssembly:
                     # The Z80 includes repeats like 2A and ED6B. TODO: fix this
                     return(possibles[i], possibles_info[i])
 
-        return (possibles[0], possibles_info[0])
+            return (possibles[0], possibles_info[0])
 
-        # raise AssemblyException('Multiple Matches')
+        raise AssemblyException('Multiple Matches')
 
     def fill_in_opcode(self, _text, asm, address, op, pass_number):
         '''
@@ -194,14 +211,32 @@ class BaseAssembly:
             for c in opcode.code:
                 if isinstance(c, str):
                     numval = info[c[0]][1]
+                    if 's2' in opcode.use[c[0]]:
+                        sz = 2
+                    else:
+                        sz = 1
                     if 'pcr' in opcode.use[key]:
                         numval = numval - address - len(opcode.code)
+                        if sz == 2:
+                            if numval < -32768 or numval > 32767:
+                                raise AssemblyException('Destination is too far away')
+                            if numval < 0:
+                                numval = numval + 65536
+                        else:
+                            if numval < -128 or numval > 127:
+                                raise AssemblyException('Destination is too far away')
+                            if numval < 0:
+                                numval = numval + 256
+
+                    if sz == 1 and numval > 255:
+                        raise AssemblyException('Value is larger than one byte')
+
                     if c[1] == '1':
                         ret.append((numval >> 8) & 0xFF)
                     else:
                         ret.append(numval & 0xFF)
-                    # TODO: we need to make sure these fit values fit their given size
-                    # print('##',text,info,opcode.use)
+
                 else:
                     ret.append(c)
+
             return ret

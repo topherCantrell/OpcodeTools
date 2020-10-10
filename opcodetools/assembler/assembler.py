@@ -1,6 +1,7 @@
 import os
 
 import opcodetools.cpu.cpu_manager
+from typing import List
 
 
 class ASMException(Exception):
@@ -10,6 +11,9 @@ class ASMException(Exception):
 
 
 class Assembler:
+
+    '''Manages labels and controls the assembly process
+    '''
 
     def __init__(self, filename: str):
         '''Create a new Assembler object
@@ -24,10 +28,10 @@ class Assembler:
         self.labels = {}
         self.cpu = None
 
-    def load_lines(self, filename: str):
+    def load_lines(self, filename: str) -> List[dict]:
         '''Load the lines from the given file
 
-        This method also recurses into include files.
+        This method also recurses into included files.
 
         The information about a line looks like is:
         {
@@ -58,7 +62,10 @@ class Assembler:
                 # TODO error checking/reporting
                 n = n[8:].strip()
                 n = os.path.join(basep, n)
-                ret = ret + self.load_lines(n)
+                try:
+                    ret = ret + self.load_lines(n)
+                except FileNotFoundError:
+                    raise ASMException('Could not find file ' + n, {'file_name': n, 'line_number': pos, 'text': line})
                 continue
             ret.append({
                 'file_name': filename,
@@ -90,7 +97,7 @@ class Assembler:
                 ret.append(line)
         return ret
 
-    def process_data_term(self, _line, pass_number: int, cur_term: str):
+    def process_data_term(self, line, pass_number: int, cur_term: str):
         '''Process a numerical value
 
         Args:
@@ -119,10 +126,21 @@ class Assembler:
             else:
                 return [0]
         else:
-            if is_word:
-                return self.cpu.make_word(self.parse_numeric(cur_term))
-            else:
-                return [self.parse_numeric(cur_term)]
+            try:
+                if is_word:
+                    ret = self.parse_numeric(cur_term)
+                    if ret > 65535:
+                        raise ASMException('Value is larger than two bytes', line)
+                    return self.cpu.make_word(ret)
+                else:
+                    ret = self.parse_numeric(cur_term)
+                    if ret > 255:
+                        raise ASMException('Value is larger than one byte', line)
+                    return [ret]
+            except ASMException:
+                raise
+            except Exception:
+                raise ASMException('Invalid numeric value: ' + cur_term, line)
 
     def process_directive_data(self, line, pass_number: int):
         '''Process a data directive
@@ -182,9 +200,8 @@ class Assembler:
         Returns:
             The evaluation value
         '''
-        # TODO: I don't like this here. We need to parse these out while selecting opcodes.
-        s = s.replace('>', '')
-        s = s.replace('<', '')
+        if s[0] == '<' or s[0] == '>':
+            s = s[1:]
         z = {**self.labels, **self.defines}
         v = eval(s, None, z)
         return v
@@ -211,19 +228,24 @@ class Assembler:
             raise ASMException('Multiply defined: ' + n, line)
         if n.startswith('_'):
             # Handle configs
-            self.process_config_define(n, v)
+            self.process_config_define(line, n, v)
         else:
             # Must be a numeric expression
-            v = self.parse_numeric(v)
-            self.defines[n] = v
+            try:
+                v = self.parse_numeric(v)
+                self.defines[n] = v
+            except Exception:
+                raise ASMException('Invalid numeric constant: ' + v, line)
 
-    def process_config_define(self, key: str, value: str):
+    def process_config_define(self, line: dict, key: str, value: str):
         '''Process config defines
 
         Config defines are of the form ._VAR = VALUE.
         '''
         if key == '_CPU':
             self.cpu = opcodetools.cpu.cpu_manager.get_cpu_by_name(value)
+            if not self.cpu:
+                raise ASMException('Unknown CPU: ' + value, line)
             self.cpu.init_assembly()
             if not self.cpu._opcodes[0].frags:
                 self.cpu.make_frags()
@@ -242,6 +264,7 @@ class Assembler:
                 n = line['text']
 
                 if n.startswith('.'):
+
                     # Define (key = value)
                     i = n.find('"')  # In case the right side is a string, which might have '=' in it.
                     if i < 0:
@@ -259,6 +282,7 @@ class Assembler:
                         raise ASMException('Unknown directive: ' + n, line)
 
                 elif n.endswith(':'):
+
                     # Label (or origin)
                     n = n[:-1].strip()
                     if pass_number == 0:
@@ -275,10 +299,14 @@ class Assembler:
                     except Exception:
                         # Not a number ... this is a label to remember
                         self.labels[n] = address
+
                 else:
+
+                    # Line of assembly
                     line['address'] = address
                     if not self.cpu:
                         raise ASMException('No CPU defined', line)
+
                     # Opcode
                     op = self.cpu.find_opcode_for_text(n, self)
                     if not op:
@@ -293,6 +321,11 @@ class Assembler:
                     address = address + len(line['data'])
 
     def write_listing(self, fname):
+        '''Write the listing file
+
+        Args:
+            fname : the filename to create
+        '''
         with open(fname, 'w') as f:
             f.write('#### Labels\n')
             keys = self.labels.keys()
@@ -326,11 +359,15 @@ class Assembler:
                 f.write('{} {:16} {}\n'.format(addr, data, txt))
 
     def write_binary(self, name):
+        '''Write the binary file
+
+        Args:
+            fname : the filename to create
+        '''
         for line in self.lines:
             if 'address' in line:
                 org = line['address']
                 break
-
         with open(name, 'wb') as f:
             for line in self.lines:
                 if 'data' in line and line['data']:
@@ -342,9 +379,3 @@ class Assembler:
                         org = org + 1
                     f.write(bytearray(line['data']))
                     org = org + len(bytearray(line['data']))
-
-
-if __name__ == '__main__':
-
-    a = Assembler('../../../devboard8051/test.asm')
-    a.assemble()
