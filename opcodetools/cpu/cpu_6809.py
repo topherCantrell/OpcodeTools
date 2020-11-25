@@ -1,4 +1,5 @@
 import opcodetools.cpu.base_cpu
+from opcodetools.cpu.base_assembly import AssemblyException
 
 
 OPCODES = [
@@ -511,6 +512,10 @@ POSTS = [
 
 class CPU_6809(opcodetools.cpu.base_cpu.CPU):
 
+    PSHS_REG_ORDER = ['PC', 'U', 'Y', 'X', 'DP', 'B', 'A', 'CC']
+    REG_PAIR_WORD = ['D', 'X', 'Y', 'U', 'X', 'PC']
+    REG_PAIR_BYTE = ['A', 'B', 'CC', 'DP']
+
     def __init__(self):
 
         expanded_opcodes = []
@@ -530,4 +535,50 @@ class CPU_6809(opcodetools.cpu.base_cpu.CPU):
             else:
                 expanded_opcodes.append(entry)
 
-        super().__init__(expanded_opcodes)
+        super().__init__(expanded_opcodes, False)
+
+    def fix_up_special_opcodes(self, nmatch):
+        if nmatch.startswith('PSHS ') or nmatch.startswith('PULS ') or nmatch.startswith('PSHU ') or nmatch.startswith('PULU '):
+            regs = nmatch[5:].split(',')
+            order = list(CPU_6809.PSHS_REG_ORDER)
+            if nmatch[3] == 'U':
+                order[1] = 'S'
+            if nmatch[1] == 'U':
+                order.reverse()
+            order_pos = 0
+            order_byte = 0
+            for reg in regs:
+                while True:
+                    if order_pos >= len(order):
+                        raise AssemblyException('Invalid push/pull register list')
+                    if order[order_pos] == reg:
+                        if nmatch[1] == 'S':
+                            order_byte = order_byte | (128 >> order_pos)
+                        else:
+                            order_byte = order_byte | (1 << order_pos)
+                        order_pos += 1
+                        break
+                    order_pos += 1
+            # print('Got one to fix', hex(order_byte))
+            return nmatch[:5] + str(order_byte)
+        elif nmatch.startswith('EXG ') or nmatch.startswith('TFR '):
+            regs = nmatch[4:].split(',')
+            if len(regs) != 2:
+                raise AssemblyException('Expected two registers')
+            if regs[0] in CPU_6809.REG_PAIR_WORD:
+                reg_set = CPU_6809.REG_PAIR_WORD
+                reg_ofs = 0
+            else:
+                reg_set = CPU_6809.REG_PAIR_BYTE
+                reg_ofs = 8
+            if not regs[0] in reg_set:
+                raise AssemblyException('Invalid register pair')
+            i = reg_set.index(regs[0])
+            reg_byte = (i | reg_ofs) << 4
+            if not regs[1] in reg_set:
+                raise AssemblyException('Invalid register pair')
+            i = reg_set.index(regs[1])
+            reg_byte = reg_byte | (i | reg_ofs)
+            # print('Got one to fix', hex(reg_byte))
+            return nmatch[:4] + str(reg_byte)
+        return nmatch

@@ -61,6 +61,9 @@ class BaseAssembly:
 
     NON_SUB_CHARS = ',@#$~!?[]{}|'  # Add as needed
 
+    def fix_up_special_opcodes(self, nmatch):
+        return nmatch
+
     def find_opcode_for_text(self, text: str, assembler):
         '''Find the one opcode that best matches this line of text
 
@@ -77,6 +80,8 @@ class BaseAssembly:
 
         # Ignorable whitespace
         nmatch = self.remove_unneeded_whitespace(text)
+
+        nmatch = self.fix_up_special_opcodes(nmatch)
 
         possibles = []
         possibles_info = []
@@ -198,7 +203,14 @@ class BaseAssembly:
 
             return (possibles[0], possibles_info[0])
 
-        raise AssemblyException('Multiple Matches')
+        # Their might be multiple opcodes with the same mnemonics. In that case,
+        # just pick the first
+
+        g = possibles[0]
+        for p in possibles:
+            if p.mnemonic != g.mnemonic:
+                raise AssemblyException('Multiple Matches')
+        return(possibles[i], possibles_info[i])
 
     def fill_in_opcode(self, _text, asm, address, op, pass_number):
         '''
