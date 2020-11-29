@@ -3,6 +3,7 @@ import setuptools
 # https://packaging.python.org/tutorials/packaging-projects/
 
 # From the directory with this file
+#   (modify the version then ...)
 #   py setup.py sdist bdist_wheel
 #   py -m twine upload dist/*
 
@@ -11,7 +12,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="opcodetools",  # Replace with your own username
-    version="1.3",
+    version="1.4",
     author="Chris Cantrell",
     author_email="topherCantrell@gmail.com",
     description="Assemblers/Disassemblers for retro processors (Z80, 6502, 6809, etc)",
