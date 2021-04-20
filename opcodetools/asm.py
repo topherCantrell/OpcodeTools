@@ -1,6 +1,7 @@
 from opcodetools.assembler.assembler import Assembler, ASMException
 
 import sys
+import os
 
 # TODO: lots of command line options:
 #  - Listing file (yes/no)

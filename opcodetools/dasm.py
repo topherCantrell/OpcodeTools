@@ -30,7 +30,7 @@ while pos < len(bindata):
     opc = ops[0]
 
     dat = bindata[pos:pos + len(opc.code)]
-    fills = cpu.get_mnemonic_fills(ops[0], dat, 0x1234)
+    fills = cpu.get_mnemonic_fills(ops[0], dat, pos + org)
     s = cpu.binary_to_string(opc, dat, pos + org, fills)
     pos += len(dat)
 
