@@ -27,15 +27,26 @@ OPCODES = [
 
     {"mnemonic": "HALT", "code": "1011_0000_0000_0000", "use": ""},
 
-    {"mnemonic": "JSR a", "code": "1100_aaaa_aaaa_aaaa", "use": ""},
+    {"mnemonic": "JSR a", "code": "1100_aaaa_aaaa_aaaa", "use": "a=code"},
 
     {"mnemonic": "RTS", "code": "1101_0000_bbbb_bbbb", "use": ""},
 
-    {"mnemonic": "JMP a", "code": "1110_aaaa_aaaa_aaaa", "use": ""},
+    {"mnemonic": "JMP a", "code": "1110_aaaa_aaaa_aaaa", "use": "a=code"},
 
-    {"mnemonic": "SVEC SCALE=c, BRI=b, X=d, Y=e", "code": "1111_geee_bbbb_hxxx",
+    {"mnemonic": "SVEC SCALE=c, BRI=b, X=d, Y=y", "code": "1111_gyyy_bbbb_hxxx",
         "details": "h is upper bit of c, g is lower bit", "use": ""}
 ]
+
+'''
+      aa bb
+0858: DB F0
+
+      Xxx       Yyy
+1101_1011 1111_0000
+
+y = 0 *256 = 0
+x = 3 *256 = 768
+'''
 
 
 class CPU_DVG(opcodetools.cpu.base_cpu.CPU):
