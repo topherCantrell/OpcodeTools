@@ -1,13 +1,17 @@
 import sys
 
-from opcodetools.disassembler import binary
+from opcodetools.utils import binary
 from opcodetools.cpu import cpu_manager
 
-# py dasm Z80 1000 "a.bin+b.bin+c.bin"
+arg_parse = sys.argv
 
-cpuname = sys.argv[1]
-org = int(sys.argv[2], 16)
-names = sys.argv[3]
+# py dasm Z80 1000 "a.bin+b.bin+c.bin"
+#arg_parse = ['','Z80GB','0','d:/git/gbc-sea-hunt/dmg_boot.bin']
+arg_parse = ['','6809','C000','d:/git/computerarcheology/content/coco/doubleback/roms/doubleback.bin']
+
+cpuname = arg_parse[1]
+org = int(arg_parse[2], 16)
+names = arg_parse[3]
 
 bindata = binary.load_binary(names)
 

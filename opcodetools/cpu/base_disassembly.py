@@ -47,7 +47,7 @@ class BaseDisassembly:
         Returns:
             The complete disassembly string
         '''
-
+        
         # Spacing for the disassembly fields
         spa = self.get_field_spacing()
 
@@ -74,7 +74,7 @@ class BaseDisassembly:
 
         # Build the basic form
         base = f'{add}: {ds}{mn}'
-
+        
         for f in fills:
             fill_info = fills[f]
             i = base.find(f)
@@ -169,11 +169,11 @@ class BaseDisassembly:
             if isinstance(g, str):
                 # Call out to the specific CPU in case it has specials
                 self.binary_to_string_fill(address, binary, opcode, fills, i)
-
+        
         return fills
 
     def find_opcodes_for_binary(self, binary: list, exact: bool=False) -> list:
-        '''Find the opcodes that matches the binary (a disassembly operation)
+        '''Find the opcodes that match the binary (a disassembly operation)
 
         If the match is not and exact match, the the binary can include lots of extra
         bytes (since we don't know exactly how many until we find the match).
@@ -215,5 +215,9 @@ class BaseDisassembly:
                     break
             if could_be:
                 ret.append(oc)
+
+        #if ret:
+        #    # TODO might be more complicated than this
+        #    ret = ret[0:1]
 
         return ret

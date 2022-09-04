@@ -30,10 +30,11 @@ import opcodetools.cpu.opcode
   the webified disassembly.
 
   The base uses are:
-    - const (an immediate constant)
-    - data  (address is a regular read/write memory access)
-    - code  (address is a label in the code)
-    - port  (address is a port read/write memory access)
+    - const  (an immediate unisgned constant)
+    - sconst (an immediate signed constant)
+    - data   (address is a regular read/write memory access)
+    - code   (address is a label in the code)
+    - port   (address is a port read/write memory access)
 
   Direction qualifiers include (direction often matters for I/O addresses):
     - _r  The opcode reads from the address
@@ -60,6 +61,17 @@ import opcodetools.cpu.opcode
     _bit  Bit address
     _11   11_bit address (3 bits in opcode)
 
+  Most opcodes have zero or one fill-in, but a few have more than one. These are tricky to parse.
+  Example formats:
+      - LD (t),SP
+      - LD DE,w
+      - JR r
+      - LD (IX+i),b
+      - JBC b,r
+
+  The fill-ins are always after an initial constant word . For opcodes with two fill-ins, the 
+  second fill-in is always at the very end with a constant term preceeding (usually a "," or a "#").
+
 '''
 
 
@@ -84,6 +96,7 @@ class CPU(opcodetools.cpu.base_assembly.BaseAssembly, opcodetools.cpu.base_disas
         self._opcodes_info = opcodes
         self._quick_codes = {}  # Helps in searching for large opcode lists
         for op in opcodes:
+            #print('##',op)
             opc = self.make_opcode(op)
             opc._cpu = self
             self._opcodes.append(opc)

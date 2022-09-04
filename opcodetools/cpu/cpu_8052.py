@@ -19,7 +19,7 @@ OPCODES = [
     {"mnemonic": "INC R5",           "code": "0D",               "use": ""                         },
     {"mnemonic": "INC R6",           "code": "0E",               "use": ""                         },
     {"mnemonic": "INC R7",           "code": "0F",               "use": ""                         },
-
+    
     {"mnemonic": "JBC b,r",          "code": "10bbrr",           "use": "b=data_bit_rw,r=code_pcr" },
     {"mnemonic": "ACALL p",          "code": "11pp",             "use": "p=code_11"                },
     {"mnemonic": "LCALL t",          "code": "12t1t0",           "use": "t=code"                   },

@@ -33,3 +33,6 @@ class Opcode():
                 specs = u[i + 1:].strip().split('_')
                 specs.append('s' + str(cts[sp]))
                 self.use[sp] = specs
+
+    def __repr__(self):
+        return f'OPCODE {self.mnemonic}'

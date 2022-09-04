@@ -1,8 +1,13 @@
 import opcodetools.cpu.base_cpu
 from opcodetools.cpu.base_assembly import AssemblyException
+from opcodetools.cpu.opcode import Opcode
 
+# The "yy" fill-in indicates one of the possible post codes.
+# Opcodes have at most one fill-in value.
+# The fill-in can be at the end or in the middle -- never at the beginning.
 
 OPCODES = [
+
     {"mnemonic": "LDY #w",           "code": "108Ew1w0",         "use": "w=const"      },
     {"mnemonic": "NEG p",            "code": "00pp",             "use": "p=data_bp_rw" },
     {"mnemonic": "COM p",            "code": "03pp",             "use": "p=data_bp_rw" },
@@ -22,8 +27,8 @@ OPCODES = [
     {"mnemonic": "LBLS s",           "code": "1023s1s0",         "use": "s=code_pcr"   },
     {"mnemonic": "LBHS s",           "code": "1024s1s0",         "use": "s=code_pcr"   },
     {"mnemonic": "LBCC s",           "code": "1024s1s0",         "use": "s=code_pcr"   },
-    {"mnemonic": "LBLO s",           "code": "1025s1s0",         "use": "s=code_pcr"   },
     {"mnemonic": "LBCS s",           "code": "1025s1s0",         "use": "s=code_pcr"   },
+    {"mnemonic": "LBLO s",           "code": "1025s1s0",         "use": "s=code_pcr"   },
     {"mnemonic": "LBNE s",           "code": "1026s1s0",         "use": "s=code_pcr"   },
     {"mnemonic": "LBEQ s",           "code": "1027s1s0",         "use": "s=code_pcr"   },
     {"mnemonic": "LBVC s",           "code": "1028s1s0",         "use": "s=code_pcr"   },
@@ -44,7 +49,7 @@ OPCODES = [
     {"mnemonic": "CMPD y",           "code": "10A3yy",           "use": "y_r"          },
     {"mnemonic": "CMPY y",           "code": "10ACyy",           "use": "y_r"          },
     {"mnemonic": "LDY y",            "code": "10AEyy",           "use": "y_r"          },
-    {"mnemonic": "STY y",            "code": "10AFyy",           "use": "r_w"          },
+    {"mnemonic": "STY y",            "code": "10AFyy",           "use": "y_w"          },
     {"mnemonic": "CMPD t",           "code": "10B3t1t0",         "use": "t=data_r"     },
     {"mnemonic": "CMPY t",           "code": "10BCt1t0",         "use": "t=data_r"     },
     {"mnemonic": "LDY t",            "code": "10BEt1t0",         "use": "t=data_r"     },
@@ -68,7 +73,7 @@ OPCODES = [
     {"mnemonic": "NOP",              "code": "12",               "use": ""             },
     {"mnemonic": "SYNC",             "code": "13",               "use": ""             },
     {"mnemonic": "LBRA s",           "code": "16s1s0",           "use": "s=code_pcr"   },
-    {"mnemonic": "LBSR s",           "code": "17s1s0",           "use": "s=code_pc"    },
+    {"mnemonic": "LBSR s",           "code": "17s1s0",           "use": "s=code_pcr"   },
     {"mnemonic": "DAA",              "code": "19",               "use": ""             },
     {"mnemonic": "ORCC #b",          "code": "1Abb",             "use": "b=const"      },
     {"mnemonic": "ANDCC #b",         "code": "1Cbb",             "use": "b=const"      },
@@ -81,8 +86,8 @@ OPCODES = [
     {"mnemonic": "BLS r",            "code": "23rr",             "use": "r=code_pcr"   },
     {"mnemonic": "BHS r",            "code": "24rr",             "use": "r=code_pcr"   },
     {"mnemonic": "BCC r",            "code": "24rr",             "use": "r=code_pcr"   },
-    {"mnemonic": "BLO r",            "code": "25rr",             "use": "r=code_pcr"   },
     {"mnemonic": "BCS r",            "code": "25rr",             "use": "r=code_pcr"   },
+    {"mnemonic": "BLO r",            "code": "25rr",             "use": "r=code_pcr"   },
     {"mnemonic": "BNE r",            "code": "26rr",             "use": "r=code_pcr"   },
     {"mnemonic": "BEQ r",            "code": "27rr",             "use": "r=code_pcr"   },
     {"mnemonic": "BVC r",            "code": "28rr",             "use": "r=code_pcr"   },
@@ -125,8 +130,8 @@ OPCODES = [
     {"mnemonic": "LSRB",             "code": "54",               "use": ""             },
     {"mnemonic": "RORB",             "code": "56",               "use": ""             },
     {"mnemonic": "ASRB",             "code": "57",               "use": ""             },
-    {"mnemonic": "ASLB",             "code": "58",               "use": ""             },
     {"mnemonic": "LSLB",             "code": "58",               "use": ""             },
+    {"mnemonic": "ASLB",             "code": "58",               "use": ""             },
     {"mnemonic": "ROLB",             "code": "59",               "use": ""             },
     {"mnemonic": "DECB",             "code": "5A",               "use": ""             },
     {"mnemonic": "INCB",             "code": "5C",               "use": ""             },
@@ -512,9 +517,41 @@ POSTS = [
 
 class CPU_6809(opcodetools.cpu.base_cpu.CPU):
 
+    # 1000 1001 B,A
+    # 1001 1000 B,A
     PSHS_REG_ORDER = ['PC', 'U', 'Y', 'X', 'DP', 'B', 'A', 'CC']
-    REG_PAIR_WORD = ['D', 'X', 'Y', 'U', 'X', 'PC']
-    REG_PAIR_BYTE = ['A', 'B', 'CC', 'DP']
+    REG_PAIR_WORD = ['D', 'X', 'Y', 'U', 'X', 'PC','?']
+    REG_PAIR_BYTE = ['A', 'B', 'CC', 'DP','?','?','?']
+
+    @staticmethod
+    def _register_pair(value):
+        a = (value>>4)&0x0F
+        b = value&0x0F
+
+        if a>7:
+            a = CPU_6809.REG_PAIR_BYTE[a&7]
+        else:
+            a = CPU_6809.REG_PAIR_WORD[a]
+        if b>7:
+            b = CPU_6809.REG_PAIR_BYTE[b&7]
+        else:
+            b = CPU_6809.REG_PAIR_WORD[b]
+        return a+','+b        
+
+    @staticmethod
+    def _register_stack(value,push=True,system=True):
+        v = bin(value)[2:].rjust(8,'0')
+        regs = []
+        for i in range(8):
+            if v[i]=='1':
+                regs.append(CPU_6809.PSHS_REG_ORDER[i])
+        if not system:
+            if 'U' in regs:
+                i = regs.index('U')
+                regs[i] = 'S'
+        if not push:
+            regs.reverse()
+        return ','.join(regs)
 
     def __init__(self):
 
@@ -537,7 +574,28 @@ class CPU_6809(opcodetools.cpu.base_cpu.CPU):
 
         super().__init__(expanded_opcodes, False)
 
+    def binary_to_string_fill(self, address: int, binary: list, opcode: Opcode, fills: dict, ind: int):
+        # Used for disassembly
+        if 'x' in opcode.use:
+            s = CPU_6809._register_stack(binary[1],push=True,system=True)            
+            fills['x'] = {'sub_value': s, 'visual_size': 3, 'numeric_value': 0}
+        elif 'q' in opcode.use:
+            s = CPU_6809._register_stack(binary[1],push=False,system=True)
+            fills['q'] = {'sub_value': s, 'visual_size': 3, 'numeric_value': 0}
+        elif 'u' in opcode.use:
+            s = CPU_6809._register_stack(binary[1],push=True,system=False) 
+            fills['u'] = {'sub_value': s, 'visual_size': 3, 'numeric_value': 0}
+        elif 'v' in opcode.use:
+            s = CPU_6809._register_stack(binary[1],push=False,system=False) 
+            fills['v'] = {'sub_value': s, 'visual_size': 3, 'numeric_value': 0}
+        elif 'z' in opcode.use:
+            s = CPU_6809._register_pair(binary[1])
+            fills['z'] = {'sub_value': s, 'visual_size': 3, 'numeric_value': 0}  
+        else:
+            super().binary_to_string_fill(address,binary,opcode,fills,ind)
+        
     def fix_up_special_opcodes(self, nmatch):
+        # Used in the assembly process
         if nmatch.startswith('PSHS ') or nmatch.startswith('PULS ') or nmatch.startswith('PSHU ') or nmatch.startswith('PULU '):
             regs = nmatch[5:].split(',')
             order = list(CPU_6809.PSHS_REG_ORDER)

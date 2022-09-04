@@ -1,7 +1,13 @@
+# TODO substitue "$" with "0x" in numerics
+# TODO isbyte/isword flags for data persist between terms
+# TODO better data dump for large datas (tools)
+
 import os
 
 import opcodetools.cpu.cpu_manager
 from typing import List
+
+import importlib
 
 
 class ASMException(Exception):
@@ -24,9 +30,10 @@ class Assembler:
 
         self.lines = self.load_lines(filename)
         self.code = self.remove_comments_and_blanks(self.lines)
+        self.collect_labels(self.code)
         self.defines = {}
         self.labels = {}
-        self.cpu = None
+        self.cpu = None        
 
     def load_lines(self, filename: str) -> List[dict]:
         '''Load the lines from the given file
@@ -35,9 +42,17 @@ class Assembler:
 
         The information about a line looks like is:
         {
-            'file_name': 'test.asm',
-            'line_number' : 4
-            'text' : '   MOV A,#$50'
+            'file_name'     : 'test.asm'
+            'line_number'   : 4
+            'text'          : 'MOV A,#$50'
+            'original_text' : '  MOV    A, #$50'
+            'address'       : 0x4000
+            TODO 'label'         : 'main::'
+            'data'          : [1,2,3,4]            
+            'tool_line_no'       : ...
+            'tool_end_of_block'  : ... Information for an external tool
+            'tool_text_of_block' : ...
+            'tool_module'        : ...
         }
 
         Args:
@@ -97,6 +112,18 @@ class Assembler:
                 ret.append(line)
         return ret
 
+    def collect_labels(self, lines):
+        for line in lines:
+            n = line['text']
+            i = n.find(' ')
+            if i<0:
+                i = len(n)
+            lab = n[0:i]
+            if lab.endswith(':'):
+                # This is a label
+                line['label'] = lab
+                line['text'] = n[i:].strip()                
+
     def process_data_term(self, line, pass_number: int, cur_term: str):
         '''Process a numerical value
 
@@ -114,11 +141,7 @@ class Assembler:
             cur_term = cur_term[5:].strip()
         elif(cur_term.startswith('byte ')):
             is_word = False
-            cur_term = cur_term[5:].strip()
-
-        if cur_term[0] >= '0' and cur_term[0] <= '9':
-            cur_term = cur_term.replace('_', '')
-            cur_term = cur_term.replace('.', '0')
+            cur_term = cur_term[5:].strip()        
 
         if pass_number == 0:
             if is_word:
@@ -127,13 +150,12 @@ class Assembler:
                 return [0]
         else:
             try:
-                if is_word:
-                    ret = self.parse_numeric(cur_term)
+                ret = self.parse_numeric(cur_term)
+                if is_word:                    
                     if ret > 65535:
                         raise ASMException('Value is larger than two bytes', line)
                     return self.cpu.make_word(ret)
-                else:
-                    ret = self.parse_numeric(cur_term)
+                else:                    
                     if ret > 255:
                         raise ASMException('Value is larger than one byte', line)
                     return [ret]
@@ -141,6 +163,38 @@ class Assembler:
                 raise
             except Exception:
                 raise ASMException('Invalid numeric value: ' + cur_term, line)
+
+    def process_tool(self, line, line_no, pass_number):
+        # Return the next line number (allows us to consume multiple lines)
+        
+        if pass_number==0:
+            # Find the end of the block on the first pass
+            # TODO ERROR IF WE DON'T FIND IT
+            tool_info = line['text'].split()
+            mod_name = tool_info[1]
+            if len(tool_info)>3:
+                mod_fun = tool_info[2]
+            else:
+                mod_fun = 'doAsmTool'       
+            text_of_block = []
+            end_of_block = line_no
+            while self.code[end_of_block]['text'] != '}':
+                text_of_block.append(self.code[end_of_block]['text'])
+                end_of_block += 1
+            line['tool_line_no'] = line_no
+            line['tool_end_of_block'] = end_of_block
+            line['tool_text_of_block'] = text_of_block
+            line['tool_module'] = importlib.import_module(mod_name)   
+            line['tool_function'] = mod_fun         
+        else:
+            end_of_block = line['tool_end_of_block']
+
+        fn = getattr(line['tool_module'],line['tool_function'])
+        
+        fn(self,line,pass_number,line['tool_text_of_block'])
+
+        return end_of_block + 1
+        
 
     def process_directive_data(self, line, pass_number: int):
         '''Process a data directive
@@ -151,7 +205,7 @@ class Assembler:
             line : the code line
             pass_number : 0 or 1
         '''
-
+        
         line['data'] = []
 
         cur_term = ''
@@ -200,6 +254,13 @@ class Assembler:
         Returns:
             The evaluation value
         '''
+        if s.startswith('_'):
+            s = self.scope + s
+        # Dollar for hex is very common in assembly
+        s = s.replace('$','0x')
+        if s[0] >= '0' and s[0] <= '9':            
+            s = s.replace('.', '0') # For simple ascii art
+        # TODO the addressing mode < and > should be handled elsewhere
         if s[0] == '<' or s[0] == '>':
             s = s[1:]
         z = {**self.labels, **self.defines}
@@ -219,37 +280,19 @@ class Assembler:
         '''
 
         n = line['text']
-        # print('##',n)
         i = n.index('=')
         v = n[i + 1:].strip()
         n = n[1:i].strip()
         if pass_number == 2 and (n in self.labels or n in self.defines):
             # Second pass ... handle multiply-defined errors
             raise ASMException('Multiply defined: ' + n, line)
-        if n.startswith('_'):
-            # Handle configs
-            self.process_config_define(line, n, v)
-        else:
-            # Must be a numeric expression
-            try:
-                v = self.parse_numeric(v)
-                self.defines[n] = v
-            except Exception:
-                raise ASMException('Invalid numeric constant: ' + v, line)
-
-    def process_config_define(self, line: dict, key: str, value: str):
-        '''Process config defines
-
-        Config defines are of the form ._VAR = VALUE.
-        '''
-        if key == '_CPU':
-            self.cpu = opcodetools.cpu.cpu_manager.get_cpu_by_name(value)
-            if not self.cpu:
-                raise ASMException('Unknown CPU: ' + value, line)
-            self.cpu.init_assembly()
-            if not self.cpu._opcodes[0].frags:
-                self.cpu.make_frags()
-        self.defines[key] = value
+        
+        # Must be a numeric expression
+        try:
+            v = self.parse_numeric(v)
+            self.defines[n] = v
+        except Exception:
+            raise ASMException('Invalid numeric constant: ' + v, line)    
 
     def assemble(self):
         '''Two-pass assembly
@@ -257,52 +300,80 @@ class Assembler:
 
         for pass_number in range(2):
 
+            self.scope = 'top'
             address = 0
 
-            for line in self.code:
+            num_lines = len(self.code)
+            line_no = 0
+            while line_no < num_lines:            
 
-                n = line['text']
+                line = self.code[line_no]
+                line_no += 1                
 
-                if n.startswith('.'):
-
-                    # Define (key = value)
-                    i = n.find('"')  # In case the right side is a string, which might have '=' in it.
-                    if i < 0:
-                        i = len(n)
-                    j = n.find('=')
-                    if j < i and j >= 0:
-                        self.process_define(line, pass_number)
-
-                    # Data (list of bytes/words)
-                    elif n.startswith('. ') or n.startswith('.word ') or n.startswith('.byte '):
-                        self.process_directive_data(line, pass_number)
-                        line['address'] = address
-
-                    else:
-                        raise ASMException('Unknown directive: ' + n, line)
-
-                elif n.endswith(':'):
-
+                if 'label' in line:
                     # Label (or origin)
-                    n = n[:-1].strip()
+                    n = line['label']
+
+                    if n.endswith('::'):
+                        # Set the scope for local labels
+                        self.scope = n[:-2]
+                        n = n[:-2].strip()
+                    else:
+                        # Prepend scope for local labels
+                        n = n[:-1].strip()
+                        if n[0]=='_':
+                            n = self.scope + n
+                    
                     if pass_number == 0:
                         if n in self.labels or n in self.defines:
                             raise ASMException(
                                 'Multiply defined: ' + n, line)
 
                     try:
-                        # A number ... this is an origin
-                        if n.upper().startswith('0X'):
-                            address = int(n[2:], 16)
-                        else:
-                            address = int(n)
+                        # Purely numeric? This is an "origin"
+                        a = self.parse_numeric(n)
+                        address = a
                     except Exception:
                         # Not a number ... this is a label to remember
                         self.labels[n] = address
 
-                else:
+                n = line['text']
 
-                    # Line of assembly
+                if n.startswith('.'):
+                    # These are directives to the assembler
+
+                    if n.upper().startswith('.CPU '):
+                        # Define the CPU
+                        value = n[5:].strip()
+                        self.cpu = opcodetools.cpu.cpu_manager.get_cpu_by_name(value)
+                        if not self.cpu:
+                            raise ASMException('Unknown CPU: ' + value, line)
+                        self.cpu.init_assembly()
+                        if not self.cpu._opcodes[0].frags:
+                            # TODO revisit the assembly process ... might be easier than this
+                            self.cpu.make_frags()
+                    
+                    elif n.startswith('.tool '):
+                        # External data tools
+                        line['address'] = address
+                        line_no = self.process_tool(line,line_no, pass_number)                                            
+                    
+                    elif n.startswith('. ') or n.startswith('.word ') or n.startswith('.byte '):
+                        # Data (list of bytes/words)
+                        line['address'] = address
+                        self.process_directive_data(line, pass_number)        
+
+                    elif '=' in n:
+                        # Define (key = value)
+                        # The value is ALWAYS numeric                        
+                        self.process_define(line,pass_number)                
+
+                    else:
+                        raise ASMException('Unknown directive: ' + n, line)                
+
+                elif n:
+                    # Must be a line of assembly
+                    
                     line['address'] = address
                     if not self.cpu:
                         raise ASMException('No CPU defined', line)
@@ -312,10 +383,15 @@ class Assembler:
                     if not op:
                         raise ASMException('Unknown opcode: ' + n, line)
 
-                    try:
-                        line['data'] = self.cpu.fill_in_opcode(n, self, address, op, pass_number)
-                    except Exception as f:
-                        raise ASMException(str(f), line)
+                    #try:
+                    line['data'] = self.cpu.fill_in_opcode(n, self, address, op, pass_number)
+                    # TODO we don't want to supress errors from the code
+                    #except Exception as f:
+                    #    raise ASMException(str(f), line)
+
+                else:
+                    # Lines with only a label get here
+                    pass
 
                 if 'data' in line:
                     address = address + len(line['data'])
@@ -345,18 +421,33 @@ class Assembler:
             f.write('\n')
 
             for line in self.lines:
-                addr = ''
-                if 'address' in line:
-                    addr = '{:04X}:'.format(line['address'])
-                data = ''
-                if 'data' in line:
+                if '.tool' in line['text']:
+                    pos = 0
+                    addr = line['address']
                     for d in line['data']:
-                        data = data + '{:02X} '.format(d)
-                data = data.strip()
-                txt = line['text']
-                if 'original_text' in line:
-                    txt = line['original_text']
-                f.write('{} {:16} {}\n'.format(addr, data, txt))
+                        if pos == 0:
+                            f.write('{:04X}:'.format(addr))
+                        f.write(' {:02X}'.format(d))
+                        pos += 1
+                        if pos==32:
+                            f.write('\n')
+                            pos = 0
+                            addr+=32
+                    if pos:
+                        f.write('\n')
+                else:
+                    addr = ''
+                    if 'address' in line:
+                        addr = '{:04X}:'.format(line['address'])
+                    data = ''
+                    if 'data' in line:
+                        for d in line['data']:
+                            data = data + '{:02X} '.format(d)
+                    data = data.strip()
+                    txt = line['text']
+                    if 'original_text' in line:
+                        txt = line['original_text']
+                    f.write('{} {:16} {}\n'.format(addr, data, txt))
 
     def write_binary(self, name):
         '''Write the binary file

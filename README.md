@@ -48,14 +48,45 @@ with a ";" are seen as blank lines (ignored).
 .include hardware.asm
 ```
 
+## CPU
+
+```
+.cpu Z80
+```
+
+## Scopes and Local Labels
+
+Labels with a double colon begin a scope. All labels that begin with a "_" have the
+scope label automatically pre-pended. This allows you to reuse common labels in
+different places.
+
+For instance, "_here" below is really "DrawSprite_here" in the first scope and
+"ClearSprite_here" in the second.
+
+The scope prefix remains in effect until you change it with another double-colon label.
+
+```
+DrawSprite::
+    LDB  #20
+_here:
+    DECB
+    BNE   _here
+
+ClearSprite::
+    LDB   #20
+_here:
+    DECB
+    BNE   _here
+    ```
+
 ## Key/Value Constants
 
-```
-._CPU = Z80
-.CONST_A = 0x20
-```
+Values must be numeric.
 
-KEY = VALUE pairs. Keys that begin with "_" are meant for the assembler. 
+```
+.CONST_A = 0x20
+.CONST_B = (35 + CONST_A) * 4
+```
 
 ## Data Definition
 
