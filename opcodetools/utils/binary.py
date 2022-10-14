@@ -18,9 +18,6 @@ def load_disassembly(lines):
     
     print(lines)
 
-
-load_disassembly('../../computerarcheology/content/coco/doubleback/code.md')   
-
 def extract_data_from_disassembly(lines:List[str]):
     pass
 

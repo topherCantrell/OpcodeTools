@@ -44,7 +44,7 @@ class CPU_DVG(opcodetools.cpu.base_cpu.CPU):
             
         super().__init__(self._dvg_copcodes)
             
-    def find_opcodes_for_binary(self, binary: list, exact: bool=False) -> list:
+    def find_opcodes_for_binary(self, binary: list, exact: bool=False, hint=None) -> list:
         
         if not exact:
             raise Exception('Still working on a generic DVG disassembler')

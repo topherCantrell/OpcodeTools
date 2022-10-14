@@ -520,8 +520,8 @@ class CPU_6809(opcodetools.cpu.base_cpu.CPU):
     # 1000 1001 B,A
     # 1001 1000 B,A
     PSHS_REG_ORDER = ['PC', 'U', 'Y', 'X', 'DP', 'B', 'A', 'CC']
-    REG_PAIR_WORD = ['D', 'X', 'Y', 'U', 'X', 'PC','?']
-    REG_PAIR_BYTE = ['A', 'B', 'CC', 'DP','?','?','?']
+    REG_PAIR_WORD = ['D', 'X', 'Y', 'U', 'X', 'PC','?','?']
+    REG_PAIR_BYTE = ['A', 'B', 'CC', 'DP','?','?','?','?']
 
     @staticmethod
     def _register_pair(value):

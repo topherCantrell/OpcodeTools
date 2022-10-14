@@ -172,7 +172,7 @@ class BaseDisassembly:
         
         return fills
 
-    def find_opcodes_for_binary(self, binary: list, exact: bool=False) -> list:
+    def find_opcodes_for_binary(self, binary: list, exact: bool=False, hint=None) -> list:
         '''Find the opcodes that match the binary (a disassembly operation)
 
         If the match is not and exact match, the the binary can include lots of extra
@@ -216,8 +216,12 @@ class BaseDisassembly:
             if could_be:
                 ret.append(oc)
 
-        #if ret:
-        #    # TODO might be more complicated than this
-        #    ret = ret[0:1]
+        if ret and len(ret)>1:
+            if hint:
+                for oc in ret:
+                    if oc.mnemonic.startswith(hint):
+                        ret = [oc]                
+            else:
+                ret = [ret[0]]                 
 
         return ret

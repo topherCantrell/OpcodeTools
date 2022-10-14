@@ -7,7 +7,9 @@ arg_parse = sys.argv
 
 # py dasm Z80 1000 "a.bin+b.bin+c.bin"
 #arg_parse = ['','Z80GB','0','d:/git/gbc-sea-hunt/dmg_boot.bin']
-arg_parse = ['','6809','C000','d:/git/computerarcheology/content/coco/doubleback/roms/doubleback.bin']
+#arg_parse = ['','6809','C000','d:/git/computerarcheology/content/coco/doubleback/roms/doubleback.bin']
+#arg_parse = ['','6809','8000','d:/git/computerarcheology/content/arcade/digdug2/roms/main.bin']
+arg_parse = ['','6809','E000','d:/git/computerarcheology/content/arcade/digdug2/roms/sound.bin']
 
 cpuname = arg_parse[1]
 org = int(arg_parse[2], 16)
