@@ -48,6 +48,15 @@ with a ";" are seen as blank lines (ignored).
 .include hardware.asm
 ```
 
+## Origin
+
+Specify the origin of the code with a numeric label. For instance:
+
+```
+0x8000:
+    LDA  #10
+```
+
 ## CPU
 
 ```
@@ -109,8 +118,10 @@ Values must be numeric.
 
 .include hardware.asm
 
-._CPU = Z80
+.cpu Z80
+
 .CONST_A = 0x20
+.CONST_B = (35 + CONST_A) * 4
 
 0x8000:
 Start:
