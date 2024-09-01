@@ -47,7 +47,7 @@ class Assembler:
             'text'          : 'MOV A,#$50'
             'original_text' : '  MOV    A, #$50'
             'address'       : 0x4000
-            TODO 'label'         : 'main::'
+            TODO 'label'         : 'main:'
             'data'          : [1,2,3,4]            
             'tool_line_no'       : ...
             'tool_end_of_block'  : ... Information for an external tool
@@ -300,7 +300,7 @@ class Assembler:
 
         for pass_number in range(2):
 
-            self.scope = 'top'
+            self.scope = ''
             address = 0
 
             num_lines = len(self.code)
@@ -312,27 +312,21 @@ class Assembler:
 
                 if 'label' in line:
                     # Label (or origin)
-                    n = line['label']
-
-                    if n.endswith('::'):
-                        # Set the scope for local labels
-                        self.scope = n[:-2]
-                        n = n[:-2].strip()
-                    else:
-                        # Prepend scope for local labels
-                        n = n[:-1].strip()
-                        if n[0]=='_':
-                            n = self.scope + n
+                    n = line['label'][:-1]
+                    if n.startswith('_'):
+                        n = self.scope + n
+                    else:                        
+                        self.scope = n
                     
                     if pass_number == 0:
                         if n in self.labels or n in self.defines:
-                            raise ASMException(
-                                'Multiply defined: ' + n, line)
+                            raise ASMException('Multiply defined: ' + n, line)
 
                     try:
                         # Purely numeric? This is an "origin"
                         a = self.parse_numeric(n)
                         address = a
+                        self.scope = ''
                     except Exception:
                         # Not a number ... this is a label to remember
                         self.labels[n] = address
