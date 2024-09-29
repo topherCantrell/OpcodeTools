@@ -87,7 +87,7 @@ class BaseAssembly:
         possibles_info = []
         longest_first_frag = 0
         for op in self._opcodes:
-            remain = nmatch
+            remain = nmatch                    
             info = {}
             for fi in range(len(op.frags)):
                 if not remain:
@@ -97,7 +97,7 @@ class BaseAssembly:
                 # Next fragment of the opcode being tested
                 frag = op.frags[fi]
                 if not frag[0].islower():
-                    if remain.startswith(frag):
+                    if remain.upper().startswith(frag):
                         # This is a static fragment ... just peel it off
                         remain = remain[len(frag):]
                     else:

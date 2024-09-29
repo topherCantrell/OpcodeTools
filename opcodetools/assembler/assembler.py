@@ -68,6 +68,21 @@ class Assembler:
         with open(filename, 'r') as f:
             raw_lines = f.readlines()
 
+        if filename.endswith('.md'):
+            # Only include code blocks of a markdown file
+            code_lines = []
+            in_code = False
+            for line in raw_lines:
+                if line.startswith('```code'):
+                    in_code = not in_code
+                    continue
+                if in_code and line.startswith('```'):
+                    in_code = False
+                    continue
+                if in_code:
+                    code_lines.append(line)
+            raw_lines = code_lines            
+
         ret = []
         pos = 0
         for line in raw_lines:
@@ -313,9 +328,9 @@ class Assembler:
                 if 'label' in line:
                     # Label (or origin)
                     n = line['label'][:-1]
-                    if n.startswith('_'):
-                        n = self.scope + n
-                    else:                        
+                    if n.startswith('_'):                        
+                        n = self.scope + n                        
+                    else:          
                         self.scope = n
                     
                     if pass_number == 0:
@@ -325,8 +340,9 @@ class Assembler:
                     try:
                         # Purely numeric? This is an "origin"
                         a = self.parse_numeric(n)
-                        address = a
-                        self.scope = ''
+                        address = a       
+                        if str.isdigit(n[0]):
+                            self.scope = ''      
                     except Exception:
                         # Not a number ... this is a label to remember
                         self.labels[n] = address
@@ -376,7 +392,8 @@ class Assembler:
                     op = self.cpu.find_opcode_for_text(n, self)
                     if not op:
                         raise ASMException('Unknown opcode: ' + n, line)
-
+                    
+                    
                     #try:
                     line['data'] = self.cpu.fill_in_opcode(n, self, address, op, pass_number)
                     # TODO we don't want to supress errors from the code
@@ -475,7 +492,7 @@ class Assembler:
                 if 'data' in line and line['data']:
                     new_org = line['address']
                     if new_org < org:
-                        raise Exception('Origin problems')
+                        raise Exception(f'Origin problems {hex(org)} {hex(new_org)}')
                     while org < new_org:
                         f.write(bytearray([0xFF]))
                         org = org + 1
