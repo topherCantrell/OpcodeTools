@@ -10,8 +10,8 @@ import os
 try:
     a = Assembler(sys.argv[1])
     a.assemble()
-    a.write_binary(sys.argv[1] + '.bin')
     a.write_listing(sys.argv[1] + '.lst')
+    a.write_binary(sys.argv[1] + '.bin')    
     a.write_labels(sys.argv[1] + '.lab.asm')
 except ASMException as ex:
     print('##', str(ex))

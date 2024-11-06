@@ -34,6 +34,7 @@ class Assembler:
         self.defines = {}
         self.labels = {}
         self.cpu = None        
+        self.macros = {}
 
     def load_lines(self, filename: str) -> List[dict]:
         '''Load the lines from the given file
@@ -317,13 +318,66 @@ class Assembler:
 
             self.scope = ''
             address = 0
-
-            num_lines = len(self.code)
+            macro_lines = None
+            lines_added = 0
+            
             line_no = 0
-            while line_no < num_lines:            
+            while line_no < len(self.code):            
 
-                line = self.code[line_no]
+                line = self.code[line_no]                
+                # print(">>>",line)
                 line_no += 1                
+                
+                if line['text'].startswith('#'):
+                    if pass_number:
+                        continue
+                    n = line['text'][1:].strip()                                          
+                    if n.startswith('macro '):                        
+                            n = n[6:].strip()
+                            i = n.index('(')
+                            macro_name = n[:i].strip()
+                            macro_args = n[i+1:-1].strip().split(',')       
+                            macro_lines = []
+                            if macro_name in self.macros:
+                                raise ASMException('Multiply defined macro: ' + macro_name, line)
+                            self.macros[macro_name] = (macro_args,macro_lines)
+                            continue
+                    else:
+                        if macro_lines is not None:
+                            # we are collecting lines for a macro
+                            macro_lines.append(n)                            
+                            continue
+                        else:
+                            # we are using a macro   
+                            i = n.index('(')
+                            macro_name = n[:i].strip()
+                            macro_args = n[i+1:-1].strip().split(',')
+                            if macro_name not in self.macros:
+                                raise ASMException('Unknown macro: ' + macro_name, line)
+                            macro = self.macros[macro_name]                             
+                            macro_lines = list(macro[1])
+                            for pname in macro[0]:
+                                pval = macro_args.pop(0).strip()
+                                pname = ':'+pname+':'
+                                for i in range(len(macro_lines)):
+                                    macro_lines[i] = macro_lines[i].replace(pname,pval)
+                            p = line_no
+                            pi = line['line_number']
+                            pi = self.lines.index(line)
+                            for m in macro_lines:
+                                nl = {
+                                    'file_name':line['file_name'],
+                                    'line_number':line['line_number'],
+                                    'original_text':m,
+                                    'text':m}
+                                self.code.insert(p,nl)
+                                self.lines.insert(pi+1,nl)
+                                p+=1
+                                pi+=1                                
+                            continue                                                                                          
+                else:
+                    macro_lines = None                   
+                
 
                 if 'label' in line:
                     # Label (or origin)
