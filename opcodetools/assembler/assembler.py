@@ -21,7 +21,7 @@ class Assembler:
     '''Manages labels and controls the assembly process
     '''
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, initdefs = None):
         '''Create a new Assembler object
 
         Args:
@@ -31,7 +31,10 @@ class Assembler:
         self.lines = self.load_lines(filename)
         self.code = self.remove_comments_and_blanks(self.lines)
         self.collect_labels(self.code)
-        self.defines = {}
+        if initdefs:
+            self.defines = initdefs
+        else:
+            self.defines = {}
         self.labels = {}
         self.cpu = None        
         self.macros = {}
