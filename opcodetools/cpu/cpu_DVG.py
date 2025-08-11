@@ -11,7 +11,7 @@ OPCODES = [
     {"mnemonic": "VEC SCALE=7, BRI=b, X=x, Y=y",   "code": "0111_0yyy_yyyy_yyyy bbbb_0xxx_xxxx_xxxx",   "use": ""},
     {"mnemonic": "VEC SCALE=8, BRI=b, X=x, Y=y",   "code": "1000_0yyy_yyyy_yyyy bbbb_0xxx_xxxx_xxxx",   "use": ""},
     {"mnemonic": "VEC SCALE=9, BRI=b, X=x, Y=y",   "code": "1001_0yyy_yyyy_yyyy bbbb_0xxx_xxxx_xxxx",   "use": ""},
-    {"mnemonic": "CUR SCALE=s, X=t, Y=u",          "code": "1010_00yy_yyyy_yyyy ssss_00xx_xxxx_xxxx",   "use": ""},
+    {"mnemonic": "LABS SCALE=s, X=t, Y=u",         "code": "1010_00yy_yyyy_yyyy ssss_00xx_xxxx_xxxx",   "use": ""},
     {"mnemonic": "HALT",                           "code": "1011_0000_0000_0000",                       "use": ""},
     {"mnemonic": "JSR a",                          "code": "1100_aaaa_aaaa_aaaa",                       "use": "a=code"},
     {"mnemonic": "RTS",                            "code": "1101_0000_bbbb_bbbb",                       "use": ""},
